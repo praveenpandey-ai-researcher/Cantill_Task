@@ -1,0 +1,109 @@
+# Shared NON_PROCUREMENT lexicon: real money that is not spend with a third-party
+# supplier. Used by every company config via `exclusions.non_procurement.lexicon`.
+#
+# Each group has `patterns` (case-insensitive regex, matched on whole words / phrases)
+# and optional `unless` patterns: if any `unless` pattern also matches, the line is
+# NOT excluded (e.g. "TAX SERVICES" is a bought advisory service, not a tax).
+#
+# Patterns are phrases, not bare words, to avoid false hits seen in the data:
+# "HEAVY DUTY", "FINE GRIT", "BANKERS BOX", "BANCO" (Spanish: bench).
+
+groups:
+  tax:
+    patterns:
+      - '\bsales\s*(and|&)?\s*use\s+tax'
+      - '\bsales\s+tax'
+      - '\bstate\s*(and|&)\s*local\s+tax'
+      - '\b(gst|hst|pst|qst)\b'
+      - '\binput\s+tax'
+      - '\boutput\s+tax'
+      - '\bwithholding\s+tax'
+      - '\bincome\s+tax'
+      - '\bcorporate\s+tax'
+      - '\bproperty\s+tax'
+      - '\bexcise\s+tax'
+      - '\bvat\b(?!\s*(registration|consult|advis))'
+      - '\btaxes\b'
+      - '\btax\s+(expense|payment|payable|liability|refund|accrual|assessment)'
+      - '\baccrued\s+.*\btax'
+      - '\b(impuesto|impuestos|iva)\b'     # not 'ISR': Cisco ISR routers in B
+      - '\b(imposto|impostos|icms|ipi|pis|cofins|irrf|inss)\b'
+      - '\b(taxe|taxes|tva)\b'
+      - '\b(steuer|steuern|umsatzsteuer|mehrwertsteuer|vorsteuer|gewerbesteuer)\b'
+      - '\b(kdv|stopaj)\b'
+      - '\b(ндс|налог)'
+      - '\bretenci[oó]n\b'
+      - '\breten[cç][aã]o\b'
+    unless:
+      - '\bservic'            # tax services / servicios
+      - '\badvis'             # tax advisory
+      - '\bconsult'
+      - '\bassistance\b'
+      - '\bprepar'            # tax preparation
+      - '\bwork\b'            # "blanket PO for tax work"
+      - '\bsoftware\b'
+      - '\bfees?\b'           # tax advisor fees
+      - '\bmodel'             # "ISS EVA modeling assessment"
+      - '\bcustoms?\b'        # "customs clearance ... VAT": a bought clearance service
+      - '\bclear'
+
+  intercompany:
+    patterns:
+      - '\binter[\s\-]?compan'
+      - '\bintra[\s\-]?group\b'
+      - '\bi/c\b'
+      - '\bintercompa[nñ][ií]a'
+      - '\bintercompanhia'
+      - '\bkonzern(verrechnung|umlage)'
+      - '\bmanagement\s+(fee|charge)s?\s+(from|to)\s+(group|parent|hq)'
+
+  finance:
+    patterns:
+      - '\binterest\s+(expense|charge|paid|payment|on)\b'
+      - '\b(loan|mortgage)\s+(repayment|interest|payment)'
+      - '\bbank\s+(charge|charges|fee|fees|commission)'
+      - '\bfinance\s+charges?\b'
+      - '\blate\s+payment\s+(fee|interest|charge)'
+      - '\b(fx|foreign\s+exchange|exchange\s+rate)\s+(loss|gain|difference)'
+      - '\bdiferencia\s+(de\s+)?cambi'
+      - '\b(intereses|juros|zinsen)\b'
+      - '\bcomisi[oó]n(es)?\s+bancaria'
+      - '\btarifa\s+banc[aá]ria'
+      - '\bdividend'
+
+  royalty:
+    patterns:
+      - '\broyalt(y|ies)\b'
+      - '\bregal[ií]as?\b'
+      - '\blizenzgeb[uü]hr'
+
+  revenue_partner:
+    patterns:
+      - '\brevenue\s+(share|sharing)\b'
+      - '\bprofit\s+(share|sharing)\b'
+      - '\bpartner\s+(billing|payout|settlement|commission)s?'
+      - '\bsales\s+revenue\b'
+      - '\b(ingresos|receita)\s+(por\s+)?vent'
+
+  payroll_people:
+    patterns:
+      - '\b(salary|salaries|wages|payroll)\b'
+      - '\b(n[oó]mina|sueldos|sal[aá]rios)\b'
+      - '\b(pension|social\s+security|provident\s+fund)\s+contribut'
+      - '\bgarnishment'
+    unless:
+      - '\bservic'            # "payroll services" bought from a provider
+      - '\bsoftware\b'
+
+  government_fines:
+    patterns:
+      - '\b(traffic|parking|regulatory|government)\s+(fine|penalt)'
+      - '\bpenalt(y|ies)\b'
+      - '\bmultas?\b'
+      - '\b(skills\s+development|government|statutory)\s+levy'
+      - '\bdonation'
+
+# Supplier names that are tax authorities or other non-suppliers.
+supplier_patterns:
+  - '\b(revenue\s+service|receiver\s+of\s+revenue|tax\s+(authority|office|administration))'
+  - '\b(internal\s+revenue|hmrc|finanzamt|receita\s+federal|hacienda|sunat|afip|dgfip)\b'

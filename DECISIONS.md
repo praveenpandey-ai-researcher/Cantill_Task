@@ -256,3 +256,62 @@ is the purchase, so they are `DUPLICATE`. Only 50 tool lines with an ERP PO stay
 
 **Normalisation fixes found by tests.** Dotted legal forms such as `S.A. de C.V.` are collapsed
 before suffix stripping, so they strip properly.
+
+## 4. Exclusions: NON_PROCUREMENT and precedence (stage 4)
+
+Code: `spendpipe/exclude.py`. Shared lexicon: `configs/lexicons/non_procurement.yaml`.
+Evidence: `python analysis/eval_exclusions.py --config configs/company_B.yaml`. Tests: `tests/test_exclude.py`.
+
+**How a line becomes NON_PROCUREMENT.** The first rule that fires is recorded in `np_rule`,
+so every exclusion can be explained:
+1. GL account codes listed in the config (`accounts`).
+2. GL account-description regex (`account_desc_patterns`): B's intercompany accounts.
+3. Supplier ids or supplier-name patterns (tax authorities and similar, plus config extras).
+4. The shared lexicon on the description. Each group (tax, intercompany, finance, royalty,
+   revenue/partner, payroll, government/fines) has phrase patterns plus `unless` patterns.
+   Phrases and word boundaries are used, never bare substrings. The lexicon covers EN, ES, PT,
+   FR, DE, TR and RU terms.
+
+The lexicon is a config file shared by all companies, so C only needs to reference it; any
+company-specific accounts or suppliers go in that company's config.
+
+**B: intercompany.**
+- Rule: GL description matches `^IC\d`, `^IC\s`, `^I/C\b` or `^Intercompany\b`.
+  2,041 lines.
+- Intercompany vendors post 99-100% of their lines to these accounts (75 of 76 vendors). The
+  only exception line was *included* by the analyst, so no vendor-level rule is used.
+
+**B: taxes by text**: 450 lines (`STATE & LOCAL TAXES`, `SALES TAX EXPENSE`,
+`GST INPUT TAX`, `ACCRUED SALES & USE TAX`, Turkish `KDV %20`, ...).
+
+**Score against the 3,000 seed labels:** NON_PROCUREMENT precision **1.000**, recall
+**1.000** (450 / 450, no included line excluded).
+
+**False positives found on the full file and fixed** (the seed has none of these):
+- `CISCO ISR 1100 ROUTER`: `ISR` (a Mexican tax code) removed from the lexicon.
+- `CUSTOMS CLEARENCE ... 2024 VAT`: `customs` / `clear` added to the tax `unless` list.
+
+Remaining included lines that mention tax-like words, each kept on purpose:
+- Bought services: `TAX SERVICES`, `TAX CONSULTANT`, `PAYROLL SERVICES`, `TAX WORK`,
+  `ASSISTANCE WITH PROPERTY TAX`, `R&D TAX C(redit)` (advisory), `D&B FINANCE ANALYTICS`.
+- `IMPORT DUTY` / `CUSTOMS DUTY` (5 lines): B's tree has `Customs Clearance & Duties`, so
+  duty stays as spend in that leaf (assumption from stage 1).
+- `PARTNERSHIP FEES`, `WORLD ECONOMIC FORUM PARTNERSHIP`, `SAP & OMP PARTNERS`:
+  memberships or IT partners paid as suppliers. These are not "partner billings".
+- `HEAVY DUTY ...`, `MEDIUM DUTY ...`: product descriptions.
+
+**A:** zero NON_PROCUREMENT hits, consistent with stage 1 (every ERP line is a labelled
+category, no tax or intercompany text).
+
+**Precedence when several reasons apply:** CANCELLED > NOT_APPROVED > NON_PROCUREMENT >
+DUPLICATE.
+- The record's own nature comes first.
+- DUPLICATE means "already counted in another record". A copy of an intercompany or tax line
+  is not "already counted", because the original isn't counted either, so it stays
+  NON_PROCUREMENT. This affects 9 lines in B.
+
+**Result**
+| | Included | DUPLICATE | NON_PROCUREMENT | NOT_APPROVED | CANCELLED | Included spend |
+|---|---|---|---|---|---|---|
+| A | 43,359 | 21,687 | 0 | 315 | 188 | ZAR 2,995.8 m |
+| B | 37,933 | 604 | 2,491 | 0 | 0 | USD 328.6 m |

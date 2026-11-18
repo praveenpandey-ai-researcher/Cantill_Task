@@ -9,7 +9,7 @@ import pandas as pd
 
 from spendpipe.clean import clean, summarise
 from spendpipe.config import Config
-from spendpipe.exclude import apply_status
+from spendpipe.exclude import apply_non_procurement, apply_status, finalise
 from spendpipe.ingest import ingest
 from spendpipe.match import match
 
@@ -35,6 +35,13 @@ def run(cfg: Config) -> tuple[pd.DataFrame, dict]:
                         df.groupby(["source", "status_reason"]).size().items()}
 
     df, report["matching"] = timed("match", match, df, cfg)
+
+    df = timed("non_procurement", apply_non_procurement, df, cfg)
+    df = finalise(df)
+    report["exclusions"] = {
+        "by_reason": {k or "included": int(v) for k, v in df.exclusion_reason.value_counts().items()},
+        "non_procurement_rules": {k: int(v) for k, v in df.np_rule[df.np_rule != ""].value_counts().items()},
+    }
 
     report["timings_s"]["total"] = round(time.time() - t0, 2)
     log.info("Data quality:\n%s", json.dumps(report, indent=2, default=str))

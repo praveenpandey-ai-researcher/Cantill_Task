@@ -79,9 +79,17 @@ dates:
   min: "2019-01-01"
   max: "2025-12-31"
 
+exclusions:
+  non_procurement:
+    lexicon: lexicons/non_procurement.yaml
+    text_fields: [description]
+    # A has no GL accounts; no intercompany/tax suppliers found (DECISIONS.md).
+    account_desc_patterns: []
+    supplier_patterns: []
+
 matching:
   enabled: true
-  primary: ERP                 # counted
+  primary: ERP                # counted
   secondary: TOOL              # DUPLICATE when it matches an ERP line
   po_pattern: "(\\d{10})"      # ERP POs are always 10 digits
   amount_tol_abs: 0.05         # ZAR; VAT division leaves cent-level rounding

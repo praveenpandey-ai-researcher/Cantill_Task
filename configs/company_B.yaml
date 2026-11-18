@@ -62,3 +62,19 @@ dates:
 
 matching:
   enabled: false
+  exact_duplicates: true       # 613 rows identical in every field but line_id
+
+exclusions:
+  non_procurement:
+    lexicon: lexicons/non_procurement.yaml   # shared multilingual phrase list
+    text_fields: [description]
+    # Intercompany: every seed line on these GL descriptions is excluded
+    # (364/364) and none is included. Seen: IC05, IC06, ..., "IC Payables",
+    # "I/C Payable", "Intercompany - CZ".
+    account_desc_patterns:
+      - '^IC\d'
+      - '^IC\s'
+      - '^I/C\b'
+      - '^Intercompany\b'
+    accounts: []
+    supplier_ids: []
