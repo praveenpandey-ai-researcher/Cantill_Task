@@ -1,0 +1,19 @@
+# Core data handling
+pandas>=2.2
+numpy>=1.26
+python-dateutil>=2.9
+pyyaml>=6.0
+
+# Fuzzy matching and de-duplication
+rapidfuzz>=3.9
+scipy>=1.13          # connected components on sparse graphs
+
+# Classification
+scikit-learn>=1.5    # TF-IDF fallback, kNN, metrics
+sentence-transformers>=3.0   # multilingual embeddings (downloads model on first run)
+
+# Tests
+pytest>=8.0
+
+# Optional: LLM re-ranker. Only used if ANTHROPIC_API_KEY is set.
+# pip install anthropic

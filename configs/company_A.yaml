@@ -1,0 +1,66 @@
+# Company A: mining operations, two systems (SAP ERP goods receipts + AP invoice tool).
+# DRAFT (stage 0): column mapping only. Status values, exclusion rules and
+# matching settings are filled in after data exploration (stage 1+).
+
+company: A
+reporting_currency: ZAR
+# Relative to this config file. Override with --data-dir for blind-test files.
+data_dir: ../../company_A
+
+taxonomy:
+  file: taxonomy_A.csv
+
+# Labels are used ONLY by the eval harness, never by the pipeline itself.
+labels:
+  file: labels_A.csv
+  id_column: record_id
+
+sources:
+  - name: ERP
+    file: erp_goods_receipts.csv
+    role: primary              # ERP record wins when the same purchase is in both
+    id_prefix: "ERP:"
+    columns:
+      record_id: line_id
+      amount: value_zar        # already net of VAT
+      date: posting_date
+      supplier: supplier_name
+      supplier_id: vendor_id
+      description: [material_short_text, service_short_text]
+      item_code: material_number
+      quantity: quantity
+      uom: uom
+      cost_centre: cost_centre
+      po_number: po_number
+      po_line: po_item
+      currency: document_currency
+      site: site_name
+    amount:
+      gross: false
+    currency:
+      fixed: ZAR
+
+  - name: TOOL
+    file: invoice_tool_export.csv
+    role: secondary            # excluded as DUPLICATE when it matches an ERP record
+    id_prefix: "TOOL:"
+    columns:
+      record_id: tool_record_id
+      amount: gross_amount     # gross: VAT removed in cleaning
+      date: invoice_date
+      supplier: supplier_name_as_captured
+      description: line_text
+      quantity: quantity
+      po_number: po_reference
+      invoice_number: invoice_number
+      vat_rate: vat_rate
+      currency: currency
+      status: status
+    amount:
+      gross: true
+      default_vat_rate: 0.15   # brief: if VAT rate is blank, use 15%
+    currency:
+      fixed: ZAR
+
+matching:
+  enabled: true

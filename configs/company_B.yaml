@@ -1,0 +1,51 @@
+# Company B: metal packaging, one AP invoice-line file from 8 ERPs, 25 currencies.
+# DRAFT (stage 0): column mapping only. Status / exclusion rules come after
+# data exploration (stage 1+).
+
+company: B
+reporting_currency: USD
+data_dir: ../../company_B
+
+taxonomy:
+  file: taxonomy_B.csv
+
+# Seed labels: analyst-made, "useful, not perfect". Eval only.
+labels:
+  file: seed_labels.csv
+  id_column: line_id
+
+fx:
+  table_file: fx_rates_usd.csv
+  # currency_rate and the table are "units of line currency per 1 USD",
+  # so USD amount = line amount / rate.
+  rate_meaning: units_per_reporting
+
+sources:
+  - name: INV
+    file: invoice_lines.csv
+    role: primary
+    id_prefix: ""
+    columns:
+      record_id: line_id
+      amount: line_amount
+      date: invoice_date
+      supplier_id: vendor_id
+      supplier_type: supplier_type
+      description: line_description
+      item_code: material_number
+      quantity: quantity
+      currency: currency
+      fx_rate: currency_rate
+      account: gl_account
+      account_desc: gl_account_description
+      cost_centre: cost_centre
+      po_number: po_number
+      po_line: po_line
+      invoice_number: invoice_number
+      document_type: document_type
+      site: plant
+    amount:
+      gross: false
+
+matching:
+  enabled: false
