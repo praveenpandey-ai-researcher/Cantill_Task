@@ -106,7 +106,7 @@ def write(out: pd.DataFrame, path: str | Path) -> Path:
     out = out.copy()
     out["spend"] = out["spend"].map(lambda x: f"{x:.2f}")
     out["confidence"] = out["confidence"].map(lambda x: f"{x:.4f}")
-    out.to_csv(path, index=False, encoding="utf-8")
+    out.to_csv(path, index=False, encoding="utf-8", lineterminator="\n")   # same bytes on any OS
     return path
 
 
@@ -140,7 +140,7 @@ def quality_report(df: pd.DataFrame, out: pd.DataFrame, report: dict) -> dict:
 def write_report(rep: dict, out_path: str | Path) -> Path:
     p = Path(out_path)
     rp = p.with_name(p.stem + "_report.json")
-    rp.write_text(json.dumps(rep, indent=2, default=str), encoding="utf-8")
+    rp.write_text(json.dumps(rep, indent=2, default=str), encoding="utf-8", newline="\n")
     return rp
 
 

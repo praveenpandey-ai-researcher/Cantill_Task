@@ -1,7 +1,7 @@
 """Command-line entry point.
 
     python -m spendpipe run --config configs/company_A.yaml --out outputs/A.csv
-    python -m spendpipe profile <file.csv>          (drafts a config; later stage)
+    python -m spendpipe profile <file.csv> --tree <tree.csv> --out configs/company_C.yaml
 """
 from __future__ import annotations
 
@@ -31,7 +31,9 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_profile(args: argparse.Namespace) -> int:
-    log.warning("profile command not implemented yet.")
+    from spendpipe.profile import profile
+    print(profile(args.file, tree=args.tree, out=args.out, company=args.company,
+                  reporting_currency=args.currency))
     return 0
 
 
@@ -50,6 +52,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_prof = sub.add_parser("profile", help="scan a file and draft a config")
     p_prof.add_argument("file")
+    p_prof.add_argument("--tree", default=None, help="category tree file of the company")
+    p_prof.add_argument("--out", default=None, help="write the draft config here")
+    p_prof.add_argument("--company", default="C")
+    p_prof.add_argument("--currency", default="USD", help="reporting currency")
     p_prof.set_defaults(func=cmd_profile)
 
     args = parser.parse_args(argv)

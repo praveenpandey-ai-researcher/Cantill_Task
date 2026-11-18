@@ -8,15 +8,15 @@
   },
   "spend_total_included": 328610546.61,
   "spend_by_l1": {
-    "Direct Materials": 128228265.15,
-    "Logistics": 117202719.94,
-    "Indirect Materials": 29367292.4,
-    "Packaging Materials": 18099499.35,
-    "Facilities": 14741116.57,
-    "IT & Telecom": 10893707.99,
-    "Professional Services": 7007545.15,
-    "HR & Employee": 2299572.19,
-    "Utilities": 770827.87
+    "Direct Materials": 124208612.65,
+    "Logistics": 117397173.59,
+    "Indirect Materials": 47335154.92,
+    "Facilities": 13585987.13,
+    "IT & Telecom": 8873871.06,
+    "Packaging Materials": 7836132.94,
+    "Professional Services": 7804300.25,
+    "HR & Employee": 1123923.37,
+    "Utilities": 445390.7
   },
   "data_quality_flags": {
     "DESC_BLANK": 16695,
@@ -28,8 +28,8 @@
   "supplier_keys": 3912,
   "item_keys": 12803,
   "classified_lines": 37933,
-  "mean_confidence_included": 0.555,
-  "low_confidence_included_lt_0.3": 17520,
+  "mean_confidence_included": 0.575,
+  "low_confidence_included_lt_0.3": 17556,
   "category_paths_not_in_tree": 0,
   "clean": {
     "rows": 41028,
@@ -82,13 +82,13 @@
     "levels": 4
   },
   "timings_s": {
-    "ingest": 0.31,
-    "clean": 0.61,
+    "ingest": 0.22,
+    "clean": 0.44,
     "status": 0.03,
-    "match": 0.08,
-    "non_procurement": 0.41,
-    "dedup": 4.16,
-    "classify": 215.2,
-    "total": 220.92
+    "match": 0.06,
+    "non_procurement": 0.28,
+    "dedup": 3.08,
+    "classify": 8.31,
+    "total": 12.51
   }
 }

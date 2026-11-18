@@ -531,3 +531,55 @@ normalised supplier names and item codes are used as keys.
 **Results**
 - A: 43,359 included, ZAR 2,995.8 m; DUPLICATE 21,687, NOT_APPROVED 315, CANCELLED 188.
 - B: 37,933 included, USD 328.6 m; NON_PROCUREMENT 2,491, DUPLICATE 604.
+
+## 8. Blind-test tooling and rehearsals (stage 8)
+
+**`python -m spendpipe profile <file> --tree <tree> --out configs/company_C.yaml`**
+(`spendpipe/profile.py`, tests `tests/test_profile.py`) drafts a config for a new company.
+
+How it guesses:
+- Each canonical field is scored against each column by name hints (EN/ES/PT/DE/FR) plus
+  content: numeric share, date share, uniqueness, text length, currency codes, known status
+  words.
+- Date formats come from value shapes; day-first vs month-first from which part exceeds 12.
+- Decimal comma vs dot is detected.
+- A monthly FX table next to the data is picked up, with its column names.
+- Status values are listed with how the built-in rules treat them; unknown values are written
+  to the config to review.
+- Intercompany-looking GL values are previewed.
+- Every guess is printed; nothing is silent.
+
+**C rehearsal: B treated as an unknown company.** The profile was drafted from B's file
+alone and run with no edits:
+- Every column guess was correct.
+- The first run showed `FX_MISSING` on 3,343 lines because the FX table was not configured.
+  The profile now finds the table, after which the draft config gives **identical spend on
+  all 41,028 lines** to the hand-tuned B config.
+- Exclusions agree 100% with the seed labels; classification equals the labels-hidden
+  numbers.
+- Runtime 13 s.
+
+Two profile fixes found on A's files:
+- `tool_record_id` was not recognised as the id; a content fallback was added (first
+  unique, never-blank column).
+- `contract_status` ("On Contract") was taken for a status column; a status column must now
+  contain known approval words.
+
+**A2 rehearsal.** A slice of A's two files was put in a new folder (no labels, no tree) and run
+with the unchanged A config and `--data-dir`. The labelled memory still loads from the
+original folder; 11,551 rows were written in 20 s.
+
+**Memory tuning.** The rehearsal showed the memory was too weak (weight 3), so weight and k
+were swept on the 50/50 label split:
+
+| Setting | A L1 / L2 / L3 (spend) | B L1 / L2 / L3 (spend) |
+|---|---|---|
+| weight 3, k 10 | .927 / .861 / .845 | .988 / .980 / .978 |
+| weight 10, k 10 | .938 / .879 / .864 | .990 / .989 / .987 |
+| weight 30, k 10 | .931 / .872 / .857 | .972 / .972 / .969 |
+| **weight 10, k 5** | **.945 / .885 / .874** | **.990 / .990 / .988** |
+
+The reference calibration curve was refitted afterwards (A ECE 0.028).
+
+**Output file names:** `outputs/praveenpandey__A.csv` and `praveenpandey__B.csv`, each with
+its `_report.json`, written with LF line endings so the bytes are the same on any OS.

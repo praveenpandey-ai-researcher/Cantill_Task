@@ -74,9 +74,10 @@ DEFAULTS = {
         "zero_shot": [[0.05, 0.0], [0.1, 0.0], [0.15, 0.055], [0.35, 0.055], [0.4, 0.101],
                       [0.45, 0.122], [0.5, 0.196], [0.55, 0.251], [0.75, 0.251], [0.8, 0.46],
                       [0.85, 0.685], [0.9, 0.957], [0.95, 0.964], [1.0, 1.0]],
-        "reference": [[0.05, 0.0], [0.1, 0.065], [0.15, 0.243], [0.2, 0.271], [0.25, 0.587],
-                      [0.3, 0.768], [0.35, 0.864], [0.4, 0.916], [0.45, 0.96], [0.6, 0.961],
-                      [0.65, 0.992], [0.8, 0.994], [0.85, 1.0], [1.0, 1.0]],
+        "reference": [[0.05, 0.0], [0.1, 0.194], [0.2, 0.248], [0.25, 0.252], [0.3, 0.534],
+                      [0.35, 0.731], [0.4, 0.823], [0.45, 0.884], [0.5, 0.884], [0.55, 0.962],
+                      [0.6, 0.962], [0.65, 0.983], [0.75, 0.985], [0.8, 0.999], [0.85, 1.0],
+                      [1.0, 1.0]],
         "reference_min_similarity": 0.9,
     },
     # Optional supervised kNN layer from labelled examples of the SAME company
@@ -315,7 +316,9 @@ class Classifier:
         identical text dominates and an unfamiliar one barely moves P.
         Vague texts ('No object') are allowed here: the labelled examples show
         what such lines usually are for this company."""
-        rc = {"k": 10, "weight": 3.0, "power": 4.0, **(self.cc.get("reference") or {})}
+        # k=5, weight=10 measured best on a 50/50 label split of A and B
+        # (A L1/L2/L3 spend .945/.885/.874, B .990/.990/.988)
+        rc = {"k": 5, "weight": 10.0, "power": 4.0, **(self.cc.get("reference") or {})}
         ref_text, ref_leaf = reference
         n_leaf = P.shape[1]
         # one distribution per unique reference text (labels of identical texts pooled)
