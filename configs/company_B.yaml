@@ -64,6 +64,13 @@ matching:
   enabled: false
   exact_duplicates: true       # 613 rows identical in every field but line_id
 
+dedup:
+  supplier:
+    link_by_id: true           # B has vendor ids only, no names
+  item:
+    no_code: text              # no material number -> cluster descriptions
+    text_threshold: 0.9
+
 exclusions:
   non_procurement:
     lexicon: lexicons/non_procurement.yaml   # shared multilingual phrase list

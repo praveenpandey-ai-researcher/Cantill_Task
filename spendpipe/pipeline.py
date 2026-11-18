@@ -9,6 +9,7 @@ import pandas as pd
 
 from spendpipe.clean import clean, summarise
 from spendpipe.config import Config
+from spendpipe.dedup import dedup
 from spendpipe.exclude import apply_non_procurement, apply_status, finalise
 from spendpipe.ingest import ingest
 from spendpipe.match import match
@@ -38,6 +39,11 @@ def run(cfg: Config) -> tuple[pd.DataFrame, dict]:
 
     df = timed("non_procurement", apply_non_procurement, df, cfg)
     df = finalise(df)
+
+    df = timed("dedup", dedup, df, cfg)
+    report["dedup"] = {"supplier_keys": int(df.supplier_key[df.supplier_key != ""].nunique()),
+                       "item_keys": int(df.item_key[df.item_key != ""].nunique()),
+                       "lines_without_item_key": int((df.item_key == "").sum())}
     report["exclusions"] = {
         "by_reason": {k or "included": int(v) for k, v in df.exclusion_reason.value_counts().items()},
         "non_procurement_rules": {k: int(v) for k, v in df.np_rule[df.np_rule != ""].value_counts().items()},

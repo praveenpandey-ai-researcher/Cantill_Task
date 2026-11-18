@@ -315,3 +315,91 @@ DUPLICATE.
 |---|---|---|---|---|---|---|
 | A | 43,359 | 21,687 | 0 | 315 | 188 | ZAR 2,995.8 m |
 | B | 37,933 | 604 | 2,491 | 0 | 0 | USD 328.6 m |
+
+## 5. Supplier and item de-duplication (stage 5)
+
+Code: `spendpipe/dedup.py`. Evidence and threshold sweeps: `python analysis/eval_dedup.py`.
+Tests: `tests/test_dedup.py`.
+
+**Metric.** Pairwise precision / recall over lines: of all line pairs we put in the same
+group, how many the client also groups (precision), and of the client's pairs, how many we
+group (recall). This is measured on A's 37,029 labelled ERP lines.
+
+### Suppliers
+Method:
+1. Normalise names: upper-case, strip accents, punctuation and legal suffixes (`(PTY) LTD`,
+   `CC`, `S.A. de C.V.`, `GmbH`, ...), and squash spaces (`YARF IELD` = `YARFIELD`).
+2. Build a graph that links each name to its vendor id, plus fuzzy edges between names in
+   the same 3-letter block (rapidfuzz ratio >= 92).
+3. Connected components are the suppliers.
+
+**Client rule (A config, `unmanaged_bucket`).** 96% of all golden supplier pairs come from
+one golden key that holds 122 differently named suppliers, and 99.2% of its lines have no
+`vendor_id`. So a supplier whose ERP lines mostly lack a vendor id goes into one shared key,
+`UNMANAGED`.
+- Name clustering only: P 1.000 / R 0.100 (each unmanaged supplier stays separate).
+- Bucket by line (blank id -> bucket): P 0.729 / R 0.971.
+- **Bucket by supplier (majority of its lines blank): P 1.000 / R 1.000.**
+
+This is a client convention, so it lives in A's config. C and B don't get it unless their
+config turns it on.
+
+**Generic path (for C), tested on realistic noise.** The tool's as-captured supplier names
+were clustered together with ERP names, using the supplier of the ERP line each tool line
+matched in stage 3 as truth (191 names, 58k lines). Exact normalised names already give
+P = R = 1.000, and every fuzzy threshold from 85 to 95 stays at 1.000 (80 drops to P 0.9997).
+92 is used for a safety margin.
+
+**B:** no supplier names exist, only vendor ids, so supplier_key = vendor id (3,995 keys).
+Different vendor ids for one real supplier can't be detected without names. Assumption:
+each vendor id is one supplier.
+
+DUPLICATE lines take the supplier key of the record they duplicate. All tool lines in A end
+up on supplier keys that also exist on ERP lines.
+
+### Items
+Order:
+1. Material code.
+2. Config bucket rules.
+3. Inherit from the duplicated record.
+4. Text -> code mapping.
+5. Text clustering.
+6. Vendor + GL fallback.
+
+**Client rules (A config).**
+- `item_key` is blank exactly when there is no material number (15,816 lines), so
+  `no_code: blank`.
+- 66% of keyed golden pairs come from one key: Catalogue / Free Text materials with a blank
+  material type (192 materials, 2,659 lines). This becomes bucket rule
+  `NONCATALOGUE_MATERIAL` (only for lines with a code).
+- Material code alone: P 1.000 / R 0.474 on keyed lines. **With the bucket rule: P 0.996 /
+  R 0.995 (blank counted as a group: 0.9998 / 0.9998).**
+- Merging material numbers that share the same text *hurts* (P 0.789) because the client
+  gives identical texts different keys. Not done.
+
+**Text -> code for lines without a code.**
+- The tool never captures material numbers. A code-less line whose text matches a coded
+  item's text takes that item's key: TF-IDF character 2-4-gram cosine >= 0.6 with identical
+  numbers, or >= 0.8 regardless of numbers, because OCR turns letters into digits (`B1T`,
+  `CYL1NDER`).
+- Tested on 12,500 tool lines matched to keyed ERP lines (truth known): 90% get a key, and
+  98.9% of those keys are correct.
+- In A this applies only to TOOL (config `text_to_code.sources`). The first version also gave
+  keys to ERP service lines, which dropped recall from 0.9998 to 0.836, because in the ERP a
+  missing material number means a service the client leaves unkeyed. Tool lines that
+  duplicate an ERP line inherit its key even when it is blank.
+- Result: 47% of A's tool-only invoices get a catalogued material's key.
+
+**Generic text clustering (for C / B lines without a code).**
+- Method: TF-IDF character n-grams, cosine >= 0.85, connected components, and **two texts
+  may only join if their numbers are identical**.
+- Without that rule, size variants chain together (`DETONATOR 3.5M,7` ~ `3.5M,8`): P 0.70 at
+  cosine 0.9.
+- With it, P 0.970 / R 0.995 (codes hidden, A's keyed lines). Exact text gives the same
+  0.970 ceiling, where the client keys identical texts differently.
+
+**No code and no text** (B: 4,195 lines, single-space descriptions): the key is vendor + GL
+account (`unknown:V500123|GL40125`). Same vendor and account is most likely the same kind of
+purchase, which is better than one blank group.
+
+**Runtime:** de-dup takes 2.8 s for A and 4.7 s for B.

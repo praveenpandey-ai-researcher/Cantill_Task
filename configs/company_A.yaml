@@ -79,6 +79,33 @@ dates:
   min: "2019-01-01"
   max: "2025-12-31"
 
+dedup:
+  supplier:
+    threshold: 92              # rapidfuzz ratio on normalised, space-squashed names
+    # Client rule found in labels_A: suppliers with no vendor-master record
+    # (vendor_id blank on most of their ERP lines) share ONE golden key.
+    unmanaged_bucket:
+      sources: [ERP]
+      min_blank_share: 0.5
+      key: UNMANAGED
+  item:
+    # Client keys only catalogued materials: no material number -> blank item_key.
+    no_code: blank
+    # The tool never captures material numbers: a tool line whose text matches a
+    # catalogued material's text gets that material's key (98.9% correct on tool
+    # lines matched to ERP). Not for ERP lines: there, a missing material number
+    # means a service / free-text purchase, which the client leaves unkeyed.
+    text_to_code:
+      sources: [TOOL]
+      threshold: 0.6
+      relaxed_threshold: 0.8
+    # Client rule: catalogue / free-text materials without a material type share
+    # one golden key (2,659 lines, 192 material numbers).
+    bucket_rules:
+      - key: NONCATALOGUE_MATERIAL
+        only_with_code: true
+        when: {x_material_type: "", x_spend_type: [Catalogue, Free Text]}
+
 exclusions:
   non_procurement:
     lexicon: lexicons/non_procurement.yaml
