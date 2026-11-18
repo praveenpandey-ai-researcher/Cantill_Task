@@ -7,6 +7,7 @@ import time
 
 import pandas as pd
 
+from spendpipe.classify import classify
 from spendpipe.clean import clean, summarise
 from spendpipe.config import Config
 from spendpipe.dedup import dedup
@@ -17,7 +18,9 @@ from spendpipe.match import match
 log = logging.getLogger(__name__)
 
 
-def run(cfg: Config) -> tuple[pd.DataFrame, dict]:
+def run(cfg: Config, stop_before: str | None = None) -> tuple[pd.DataFrame, dict]:
+    """Run all stages. `stop_before='classify'` returns the frame just before
+    classification (used by the evaluation scripts to try classifier settings)."""
     report: dict = {"company": cfg.company, "timings_s": {}}
     t0 = time.time()
 
@@ -44,6 +47,10 @@ def run(cfg: Config) -> tuple[pd.DataFrame, dict]:
     report["dedup"] = {"supplier_keys": int(df.supplier_key[df.supplier_key != ""].nunique()),
                        "item_keys": int(df.item_key[df.item_key != ""].nunique()),
                        "lines_without_item_key": int((df.item_key == "").sum())}
+    if stop_before == "classify":
+        return df, report
+
+    df, report["classify"] = timed("classify", classify, df, cfg)
     report["exclusions"] = {
         "by_reason": {k or "included": int(v) for k, v in df.exclusion_reason.value_counts().items()},
         "non_procurement_rules": {k: int(v) for k, v in df.np_rule[df.np_rule != ""].value_counts().items()},

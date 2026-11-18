@@ -64,6 +64,15 @@ matching:
   enabled: false
   exact_duplicates: true       # 613 rows identical in every field but line_id
 
+classify:
+  model: BAAI/bge-m3
+  text_fields: [description]
+  # Supervised kNN layer from the analyst's 3,000 seed labels (B and B2).
+  reference:
+    data_dir: ../../company_B
+    labels: seed_labels.csv
+    id_column: line_id
+
 dedup:
   supplier:
     link_by_id: true           # B has vendor ids only, no names

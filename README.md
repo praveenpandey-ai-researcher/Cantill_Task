@@ -13,8 +13,9 @@ pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu   # sm
 pip install -r requirements.txt
 ```
 
-The first run downloads the embedding model (`intfloat/multilingual-e5-small`, ~470 MB)
-into `.cache/`. Without internet, the classifier falls back to a local TF-IDF model.
+The first run downloads the embedding model (`BAAI/bge-m3`, ~2.2 GB) into `.cache/`.
+For a smaller, faster model set `classify.model: intfloat/multilingual-e5-small` in the config.
+Without internet, the classifier falls back to a local TF-IDF model automatically.
 
 ## Run
 

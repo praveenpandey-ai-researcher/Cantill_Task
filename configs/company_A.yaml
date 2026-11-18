@@ -79,6 +79,16 @@ dates:
   min: "2019-01-01"
   max: "2025-12-31"
 
+classify:
+  model: BAAI/bge-m3            # multilingual; intfloat/multilingual-e5-small is faster
+  text_fields: [description]    # ERP: material text + service text; tool: OCR line text
+  # Supervised kNN layer from A's own labels (for A and the blind-test A2).
+  # Read from this folder even when --data-dir points at the A2 files.
+  reference:
+    data_dir: ../../company_A
+    labels: labels_A.csv
+    id_column: record_id
+
 dedup:
   supplier:
     threshold: 92              # rapidfuzz ratio on normalised, space-squashed names

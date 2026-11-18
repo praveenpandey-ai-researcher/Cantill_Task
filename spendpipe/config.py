@@ -67,11 +67,8 @@ DEFAULTS: dict[str, Any] = {
         "supplier": {"threshold": 90},
         "item": {"threshold": 0.9},
     },
-    "classify": {
-        "model": "intfloat/multilingual-e5-small",
-        "cache_dir": ".cache",
-        "use_llm": "auto",            # auto = only if an API key is present
-    },
+    # Classifier defaults live in ONE place: spendpipe/classify.py (DEFAULTS).
+    "classify": {},
 }
 
 SOURCE_DEFAULTS: dict[str, Any] = {

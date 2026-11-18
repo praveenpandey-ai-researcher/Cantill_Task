@@ -403,3 +403,83 @@ account (`unknown:V500123|GL40125`). Same vendor and account is most likely the 
 purchase, which is better than one blank group.
 
 **Runtime:** de-dup takes 2.8 s for A and 4.7 s for B.
+
+## 6. Classification into the tree (stage 6)
+
+Code: `spendpipe/classify.py`, `spendpipe/taxonomy.py`, `spendpipe/embed.py`.
+Evaluation: `python analysis/eval_classify.py --company A B` (labels hidden) and
+`--reference-split 0.5` (half the labels as memory). Calibration fit: `--fit-calibration`.
+Tests: `tests/test_classify.py` (offline, TF-IDF backend).
+
+**Tree.** Read from the file at run time.
+- Level columns are detected by name (`category_l1`, `level_2`, ...).
+- Ragged branches are supported (trailing blanks end the branch early), up to 4 or more
+  levels.
+- An optional description/keyword column is used if present.
+- A path that is a prefix of a longer path is an inner node, not a leaf.
+- No category name is in the code.
+
+**Final method** (every weight is in the `classify` config section):
+1. Line text = configured fields. SAP short text is expanded with a shared, generic
+   abbreviation lexicon (`configs/lexicons/abbreviations.yaml`: `MNTN` -> maintenance,
+   `ROFBLT` -> roof bolt, ...). Part numbers and separators are removed. Blank, number-only and
+   vague texts (`Product`, `Parts`, `No object`, ...) are marked vague.
+2. Zero-shot: each unique text is embedded once (disk cache) with `BAAI/bge-m3` and compared
+   with each leaf in two views (full path and leaf name). Softmax at temperature 0.01 turns
+   the similarities into probabilities, which are blended 80/20 with a character n-gram
+   TF-IDF view.
+3. Supplier prior: the average distribution of a supplier's clear lines (weight 0.3; 1.0 for
+   vague lines). Item prior: same idea, for vague lines only.
+4. Optional kNN layer from the same company's labelled lines (A: labels_A, B: seed labels),
+   loaded through the config from its own folder, so `--data-dir` (A2/B2) doesn't move it.
+   The weight grows with the similarity of the nearest labelled text, so identical texts
+   dominate and unfamiliar ones fall back to zero-shot. C has no labels and runs without it.
+5. Top-down decoding: L1 = the node with the highest *summed* leaf probability, then L2
+   inside it, and so on. Blank below the branch's last level.
+6. Confidence = the chosen leaf's probability mapped through an isotonic calibration curve
+   fitted on A and B (one curve for zero-shot lines, one for lines with a close labelled
+   example).
+
+**What was measured (spend-weighted accuracy, labels hidden unless noted)**
+
+| Experiment | A L1 / L2 / L3 | B L1 / L2 / L3 | Decision |
+|---|---|---|---|
+| e5-small, path text (first baseline) | .53 / .32 / .30 | .35 / .34 / .27 | too weak |
+| e5-base | .47 / .34 / .27 | .42 / .35 / .26 | no gain, 3x slower |
+| paraphrase-multilingual-mpnet | .33 / .20 / .14 | .36 / .31 / .28 | worse |
+| **bge-m3**, path + leaf views, abbreviations | .67 / .39 / .32 | .88 / .32 / .26 | chosen model |
+| + self-training (pseudo-labels -> logistic regression) | worse | B L3 .35 -> .18 | **removed**: reinforces its own mistakes |
+| + item prior on clear lines | L1 .67 -> .59 | = | vague lines only (A's item buckets mix categories) |
+| + supplier prior | = | L1 .88 -> .93 | kept |
+| + 20% TF-IDF blend | **.685 / .396 / .312** | **.917 / .339 / .259** | kept (also lowers calibration error) |
+| TF-IDF only (offline fallback) | .68 / .39 / .27 | .52 / .52 / .41 | works without any model download |
+| kNN memory from 50% of labels (A2 / B2 scenario) | **.927 / .861 / .845** | **.988 / .980 / .978** | used for A, A2, B, B2 |
+
+- Line-weighted, labels hidden: A L1 0.52 / L2 0.27 / L3 0.21; B L1 0.78 / L2 0.50 / L3 0.33.
+- Expected calibration error after calibration: A 0.030, B 0.043 (labels hidden), A 0.028
+  (with memory). B with memory is conservative: average confidence 0.71, accuracy 0.89.
+
+**Bugs found while measuring** (they explain why some intermediate numbers changed):
+- The config loader had its own `classify.model` default (e5-small) that silently overrode the
+  classifier's default. Defaults now live only in `classify.py`.
+- The automatic temperature (std / 2) was too flat on the full data set. Top-down summing then
+  favours the L1 with the most leaves, so a fixed 0.01 is used.
+- Category names were passed through the abbreviation expander, which removed `&` and
+  brackets. Category names are now embedded exactly as written.
+
+**Known limits and assumptions**
+- B's biggest spend is aluminium coil lines whose text is a dimension code
+  (`0110X74.480,12OZBDY ... SEE SPEC`). Zero-shot gets L1 right (Direct Materials) but often
+  picks `Coatings & Inks` instead of `Aluminium` at L2. Fixing that from text alone would
+  overfit B. The seed-label memory fixes it for B2.
+- A's labels depend on which machine a spare part is for (`CM` vs `SC` vs `RB Maintenance
+  Spares` for the same `P/N:` text), which text alone can't show. Hence A's lower L2/L3
+  zero-shot.
+- Seed labels are "useful, not perfect" (e.g. `Microsoft Server Cloud Enrollment` labelled
+  IT Hardware). They are used as given.
+- Excluded lines get no category (blank l1-l4). The brief asks to classify included lines.
+- Assumption: the user has no API key for the blind test, so no LLM is used (LLM cost: 0).
+  The pipeline is fully local.
+- Runtime with a warm cache: classification takes ~10 s for A (43k included lines) and B.
+  Cold, bge-m3 embeds about 100 texts/s on CPU, so a 25k-line file with ~10k unique texts
+  takes about 2 minutes.
