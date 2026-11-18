@@ -61,6 +61,13 @@ sources:
     # Seen: 27/03/2023 (day first: part 1 > 12 in 2,050 rows), 2023-03-27, 27-Mar-24
     date_formats: ["%d/%m/%Y", "%Y-%m-%d", "%d-%b-%y"]
     dayfirst: true
+    # Seen: Paid, Approved, Cancelled, On Hold, Rejected. These are all in the
+    # built-in multilingual status lists; listed here so the rule is visible.
+    status:
+      include: [Paid, Approved]
+      CANCELLED: [Cancelled]
+      NOT_APPROVED: [On Hold, Rejected]
+      unknown_means: NOT_APPROVED   # brief: only approved or paid count
     amount:
       gross: true
       default_vat_rate: 0.15   # brief: if VAT rate is blank, use 15%
@@ -74,3 +81,18 @@ dates:
 
 matching:
   enabled: true
+  primary: ERP                 # counted
+  secondary: TOOL              # DUPLICATE when it matches an ERP line
+  po_pattern: "(\\d{10})"      # ERP POs are always 10 digits
+  amount_tol_abs: 0.05         # ZAR; VAT division leaves cent-level rounding
+  amount_tol_rel: 0.001
+  text_threshold: 75
+  supplier_threshold: 85
+  # True duplicates: invoice date is within 22 days of the ERP posting date
+  # for 90% of PO-matched pairs, so 31 days is a safe window.
+  date_window_days: 31
+  # A tool PO that is not in the ERP = tool-only spend: never fall back to
+  # supplier+amount for it (those look-alikes are coincidences).
+  fallback_only_without_po: true
+  require_same_quantity: true
+  passes: [po_line_amount, po_amount, po_text, supplier_amount, po_text_any]

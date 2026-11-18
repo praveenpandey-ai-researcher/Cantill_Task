@@ -176,3 +176,83 @@ amounts give spend 0 plus the flag `AMOUNT_UNPARSABLE` (B: 3 lines).
 descriptions become blank: B 16,695 `DESC_BLANK`.
 
 **Runtime so far:** ingest + clean takes 1.2 s for A (65,549 rows) and 0.8 s for B.
+
+## 3. Count once: matching A's two systems (stage 3)
+
+Code: `spendpipe/match.py`, `spendpipe/normalise.py`, status rules in `spendpipe/exclude.py`.
+Evidence: `python analysis/eval_matching.py` (aggregates only). Tests: `tests/test_match.py`.
+
+There are no labels saying which tool line duplicates which ERP line, so every rule
+below was chosen from measured evidence, and the evaluation script re-checks it.
+
+**Order of work**
+1. **Status first.** Paid/Approved count; Cancelled -> `CANCELLED` (188); On Hold/Rejected ->
+   `NOT_APPROVED` (315). Unknown status -> `NOT_APPROVED` (brief: only approved or paid
+   count). Non-counting tool lines never take part in matching: a cancelled invoice must not
+   claim an ERP receipt and leave the real invoice looking like extra spend. When a line is
+   both cancelled and a duplicate, the reason reported is `CANCELLED` (the record's own state
+   wins). Precedence: CANCELLED > NOT_APPROVED > DUPLICATE > NON_PROCUREMENT.
+2. **Cross-system passes**, strongest evidence first. Each pass is one-to-one (greedy,
+   best text similarity first), so an ERP line can be claimed only once. Keys are normalised:
+   PO = the 10-digit number (`PO#`, `PO `, `/10.0` removed); PO line from ERP `po_item` or the
+   part after `/`; amount = net of VAT, within max(0.05 ZAR, 0.1%).
+
+   | Pass | Rule | Tool lines |
+   |---|---|---|
+   | `po_line_amount` | same PO + PO line + net amount | 4,162 |
+   | `po_amount` | same PO + net amount | 12,516 |
+   | `po_text` | same PO, item text similarity >= 75, amount differs (partial / combined invoice) | 452 |
+   | `supplier_amount` | **no PO**: supplier similarity >= 85 + same net amount + same quantity + dates within 31 days (if both known) | 3,881 |
+   | `po_text_any` | same PO + similar text, ERP line already claimed (many-to-one) | 387 |
+
+3. **Re-exported invoices** among the tool lines still unmatched: same invoice-number core +
+   supplier + net amount + normalised text -> later copy `DUPLICATE` (289). This runs **after**
+   matching on purpose. In the first version it ran before, and for 441 of the 739 "copies"
+   that had a PO a free identical ERP receipt existed. Those were two genuine identical lines
+   (the ERP has such pairs, e.g. two identical fan deliveries), and each should claim its own
+   receipt. For the same reason the exact-duplicate-row rule is not applied to the secondary
+   source. 90% of the remaining re-export copies differ from the first copy in raw PO or date
+   format, which shows they came from a second export.
+
+**Why the supplier + amount fallback is only for tool lines with NO PO.**
+- **PO typo test.** For tool lines whose PO is not in the ERP, the first version also matched
+  1,666 of them on supplier + amount. If their POs were typos, the matched ERP PO would be 1-2
+  edits away. The edit-distance distribution was the same as against a *random* ERP PO
+  (median 5). So these were coincidences: the same supplier sells the same item at the same
+  price again and again.
+- **Signals compared across match types.**
+
+  | Match type | Date gap (median / p90) | Same quantity | Text >= 90 |
+  |---|---|---|---|
+  | PO + amount (true duplicates) | 11 / 22 days | 100% | 92% |
+  | Supplier + amount, no PO | 9 / 22 days | 97% | 90% |
+  | Supplier + amount, tool PO not in ERP | 22 / 53 days | 85% | 76% |
+
+- **Decision:** a tool PO that is not in the ERP marks **tool-only spend**. No-PO lines may use
+  the fallback, which also requires the same quantity and a 31-day window when both dates
+  exist.
+
+**Why `po_text_any` (many-to-one).** After the one-to-one passes, 413 counting tool lines had a
+PO that exists in the ERP but no match. For 379 of them **every** ERP line of that PO was
+already claimed, and their text matched the PO's item (median similarity 97). These are extra
+split or repeated invoices for goods the ERP already records. Count-once says the ERP receipt
+is the purchase, so they are `DUPLICATE`. Only 50 tool lines with an ERP PO stay tool-only
+(their text doesn't match any line of that PO).
+
+**Checks** (`analysis/eval_matching.py`):
+- For every pass, 100% of matched tool lines have a supplier name that maps (through labels_A
+  on ERP names) to the same golden supplier key as the matched ERP line.
+- `po_text` pairs differ in quantity by design (1% same quantity), which confirms they are
+  partial invoices.
+
+**Result for A**
+- Tool lines: 21,687 `DUPLICATE`, 6,330 tool-only included, 188 `CANCELLED`, 315 `NOT_APPROVED`.
+- Of the tool-only lines, 5,107 have a PO not in the ERP, 1,173 have no PO, and 50 have an
+  ERP PO with unrelated text.
+- Counted spend: ERP ZAR 2,553.2 m + tool-only ZAR 442.6 m = **ZAR 2,995.8 m**.
+- Matching takes 2.5 s.
+
+**B:** a single system, so there is no cross-matching; 613 exact duplicate rows -> `DUPLICATE`.
+
+**Normalisation fixes found by tests.** Dotted legal forms such as `S.A. de C.V.` are collapsed
+before suffix stripping, so they strip properly.
