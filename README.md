@@ -9,8 +9,12 @@ Config-driven spend data pipeline and classifier (Cantill.ai Data & ML task).
 ```bash
 python -m venv .venv
 .venv/Scripts/activate        # Windows  (Linux/macOS: source .venv/bin/activate)
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu   # small CPU build
 pip install -r requirements.txt
 ```
+
+The first run downloads the embedding model (`intfloat/multilingual-e5-small`, ~470 MB)
+into `.cache/`. Without internet, the classifier falls back to a local TF-IDF model.
 
 ## Run
 
