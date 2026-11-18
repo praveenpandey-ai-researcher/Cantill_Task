@@ -24,6 +24,7 @@ sources:
       record_id: line_id
       amount: value_zar        # already net of VAT
       date: posting_date
+      posting_date: posting_date
       supplier: supplier_name
       supplier_id: vendor_id
       description: [material_short_text, service_short_text]
@@ -35,10 +36,11 @@ sources:
       po_line: po_item
       currency: document_currency
       site: site_name
+    date_formats: ["%Y-%m-%d"]
     amount:
       gross: false
     currency:
-      fixed: ZAR
+      fixed: ZAR               # value_zar is ZAR even when document_currency is EUR/CHF/MZN
 
   - name: TOOL
     file: invoice_tool_export.csv
@@ -56,11 +58,19 @@ sources:
       vat_rate: vat_rate
       currency: currency
       status: status
+    # Seen: 27/03/2023 (day first: part 1 > 12 in 2,050 rows), 2023-03-27, 27-Mar-24
+    date_formats: ["%d/%m/%Y", "%Y-%m-%d", "%d-%b-%y"]
+    dayfirst: true
     amount:
       gross: true
       default_vat_rate: 0.15   # brief: if VAT rate is blank, use 15%
     currency:
       fixed: ZAR
+
+# Dates outside this window are flagged DATE_IMPLAUSIBLE (data covers 2021-2024).
+dates:
+  min: "2019-01-01"
+  max: "2025-12-31"
 
 matching:
   enabled: true

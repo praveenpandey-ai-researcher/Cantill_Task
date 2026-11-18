@@ -19,6 +19,10 @@ fx:
   # currency_rate and the table are "units of line currency per 1 USD",
   # so USD amount = line amount / rate.
   rate_meaning: units_per_reporting
+  # A given currency_rate more than 5x away from the table rate for that
+  # currency and month is a data error (55 EUR lines carry an MXN-sized rate);
+  # the table rate is used instead. 5x leaves room for real devaluations (ARS).
+  max_rate_deviation: 5
 
 sources:
   - name: INV
@@ -28,7 +32,8 @@ sources:
     columns:
       record_id: line_id
       amount: line_amount
-      date: invoice_date
+      date: invoice_date       # brief: FX uses the invoice month
+      posting_date: posting_date   # fallback when invoice_date is implausible
       supplier_id: vendor_id
       supplier_type: supplier_type
       description: line_description
@@ -44,8 +49,16 @@ sources:
       invoice_number: invoice_number
       document_type: document_type
       site: plant
+    date_formats: ["%Y-%m-%d"]
     amount:
       gross: false
+
+# Invoice dates outside the window, or > 2 years from the posting date, are
+# flagged DATE_IMPLAUSIBLE; FX then uses the posting month instead.
+dates:
+  min: "2019-01-01"
+  max: "2025-12-31"
+  max_gap_days: 730
 
 matching:
   enabled: false

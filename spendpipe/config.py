@@ -28,6 +28,7 @@ CANONICAL_FIELDS = {
     "record_id",      # unique id of the line in its source file (required)
     "amount",         # money value (required)
     "date",           # main date used for FX month and match windows
+    "posting_date",   # secondary date: fallback when `date` is blank/implausible
     "supplier",       # supplier name as typed
     "supplier_id",    # vendor id / number
     "description",    # free text describing what was bought

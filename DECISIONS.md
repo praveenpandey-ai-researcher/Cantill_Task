@@ -118,3 +118,61 @@ leaves sit effectively at L2. Every labelled path exists in the taxonomy file.
 
 **Taxonomy B:** 9 L1 / 25 L2 / 40 L3 (L1 `Facilities` appears twice in the file, not
 contiguously, so the tree loader must group by name, not by row order).
+
+## 2. Cleaning: amounts, VAT, FX, dates (stage 2)
+
+Code: `spendpipe/clean.py`. Tests: `tests/test_clean.py`, `tests/test_ingest_clean.py`.
+
+**Amounts.** Every cell is read as text, then parsed by one function that handles
+`1,234.56`, `1.234,56`, `1 234,56`, `(500)`, SAP trailing minus `500-` and currency symbols.
+With both `,` and `.` present, the last one is the decimal mark. A lone `,` is a decimal mark
+only when 1-2 digits follow it. A config can force the convention per source. Unparsable
+amounts give spend 0 plus the flag `AMOUNT_UNPARSABLE` (B: 3 lines).
+
+**VAT (A tool).** Rate parsed to a fraction (`15`, `15%`, `0.15` -> 0.15). Blank -> 15%,
+`0` -> 0%, as stage 1 showed. net = gross / (1 + rate). Result: 26,940 lines at 15%,
+1,580 at 0%.
+
+**Currency.**
+- A source's `currency.fixed` means the amount column is always in that currency. A's
+  `value_zar` is ZAR even on the 16 lines whose `document_currency` says EUR/CHF/MZN; the
+  original value is kept as `currency_doc`.
+- Order per line:
+  1. Same as the reporting currency -> rate 1, any given rate ignored (B: 1,279 USD lines with
+     a stray rate).
+  2. Given rate.
+  3. FX table for the invoice month.
+  4. Nearest month in the table.
+- B result: given 19,667 / same-currency 17,959 / table 3,338 / nearest month 5.
+- **Wrong given rates.** 59 non-USD lines (55 EUR, 4 CHF) carry a rate of about 17.6, an
+  MXN-sized rate, 19x away from the table. Rule (config `fx.max_rate_deviation: 5`): a given
+  rate more than 5x away from the table rate for that currency and month is rejected and the
+  table rate is used, flagged `FX_GIVEN_RATE_REJECTED`. 5x leaves room for real devaluations:
+  2 ARS lines at ~2.3x off around the Dec-2023 devaluation are kept.
+- **Tiny-currency lines.** PYG (median amount 0.08), CLP (0.77) and MMK (151) give tiny USD
+  values. This might be an SAP storage quirk for zero-decimal currencies, but nothing in the
+  brief says so. **Assumption:** apply the brief's rule literally (amount / rate) and don't
+  re-scale. These lines total under 1,000 USD, so the effect on totals is negligible.
+
+**Dates.**
+- Parser order:
+  1. Explicit formats from the config.
+  2. ISO.
+  3. `YYYYMMDD`.
+  4. Excel serial numbers.
+  5. A flexible day-first parser that also understands Spanish, Portuguese, French, German
+     and Italian month names.
+- Each unique value is parsed once.
+- Flags:
+  - `blank` (A ERP 24,370; A tool 18,660).
+  - `unparsable`, which covers impossible calendar dates such as `2023-02-30`.
+  - `implausible`: outside the config window `dates.min`/`max` (2019-01-01 to 2025-12-31), or
+    more than `max_gap_days` (B: 730) from the posting date. B: 42 lines.
+- For FX, an implausible invoice date falls back to the posting month.
+- Bad dates never drop a line: the original value is kept, the line gets a flag, and the
+  line stays in the output.
+
+**Text.** Trim, collapse whitespace, strip trailing ` -` (JDE). Single-space SAP
+descriptions become blank: B 16,695 `DESC_BLANK`.
+
+**Runtime so far:** ingest + clean takes 1.2 s for A (65,549 rows) and 0.8 s for B.
