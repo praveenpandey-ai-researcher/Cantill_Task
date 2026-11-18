@@ -1,0 +1,107 @@
+{
+  "company": "A",
+  "rows": 65549,
+  "included": 43359,
+  "excluded_by_reason": {
+    "DUPLICATE": 21687,
+    "NOT_APPROVED": 315,
+    "CANCELLED": 188
+  },
+  "spend_total_included": 2995840676.66,
+  "spend_by_l1": {
+    "Mining Operating Materials": 1384359904.74,
+    "Underground Production Equipment": 771561638.28,
+    "Underground Services": 524762413.03,
+    "Flameproof Diesel Equipment": 168769081.67,
+    "Mining Support Equipment and Consumables": 146387638.94
+  },
+  "data_quality_flags": {},
+  "supplier_keys": 77,
+  "item_keys": 2946,
+  "classified_lines": 43359,
+  "mean_confidence_included": 0.771,
+  "low_confidence_included_lt_0.3": 6825,
+  "category_paths_not_in_tree": 0,
+  "clean": {
+    "rows": 65549,
+    "ERP": {
+      "rows": 37029,
+      "amount_unparsable": 0,
+      "negative_amounts": 434,
+      "date_flags": {
+        "blank": 24370,
+        "ok": 12659
+      },
+      "fx_source": {
+        "same_ccy": 37029
+      },
+      "blank_description": 0,
+      "spend_raw_total_ZAR": 2553222846.45
+    },
+    "TOOL": {
+      "rows": 28520,
+      "amount_unparsable": 0,
+      "negative_amounts": 321,
+      "date_flags": {
+        "blank": 18660,
+        "ok": 9860
+      },
+      "fx_source": {
+        "same_ccy": 28520
+      },
+      "blank_description": 0,
+      "spend_raw_total_ZAR": 1978231922.8
+    }
+  },
+  "status": {
+    "ERP:counts": 37029,
+    "TOOL:counts": 28017,
+    "TOOL:CANCELLED": 188,
+    "TOOL:NOT_APPROVED": 315
+  },
+  "matching": {
+    "exact_duplicate_rows": 0,
+    "pass_po_line_amount": 4162,
+    "pass_po_amount": 12516,
+    "pass_po_text": 452,
+    "pass_supplier_amount": 3881,
+    "pass_po_text_any": 387,
+    "reexported_invoice_lines": 289,
+    "secondary_lines": 28520,
+    "secondary_counting": 28017,
+    "secondary_matched_to_primary": 21398,
+    "secondary_only_included": 6330,
+    "secondary_only_spend": 442617828.74
+  },
+  "exclusions": {
+    "by_reason": {
+      "included": 43359,
+      "DUPLICATE": 21687,
+      "NOT_APPROVED": 315,
+      "CANCELLED": 188
+    },
+    "non_procurement_rules": {}
+  },
+  "dedup": {
+    "supplier_keys": 77,
+    "item_keys": 2946,
+    "lines_without_item_key": 28630
+  },
+  "classify": {
+    "backend": "sentence-transformers",
+    "leaves": 40,
+    "unique_texts": 5520,
+    "vague_lines": 1200,
+    "levels": 4
+  },
+  "timings_s": {
+    "ingest": 0.39,
+    "clean": 0.85,
+    "status": 0.06,
+    "match": 2.61,
+    "non_procurement": 0.52,
+    "dedup": 2.14,
+    "classify": 100.38,
+    "total": 107.16
+  }
+}

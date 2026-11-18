@@ -1,0 +1,94 @@
+{
+  "company": "B",
+  "rows": 41028,
+  "included": 37933,
+  "excluded_by_reason": {
+    "NON_PROCUREMENT": 2491,
+    "DUPLICATE": 604
+  },
+  "spend_total_included": 328610546.61,
+  "spend_by_l1": {
+    "Direct Materials": 128228265.15,
+    "Logistics": 117202719.94,
+    "Indirect Materials": 29367292.4,
+    "Packaging Materials": 18099499.35,
+    "Facilities": 14741116.57,
+    "IT & Telecom": 10893707.99,
+    "Professional Services": 7007545.15,
+    "HR & Employee": 2299572.19,
+    "Utilities": 770827.87
+  },
+  "data_quality_flags": {
+    "DESC_BLANK": 16695,
+    "FX_GIVEN_RATE_REJECTED": 59,
+    "DATE_IMPLAUSIBLE": 42,
+    "FX_NEAREST_MONTH": 5,
+    "AMOUNT_UNPARSABLE": 3
+  },
+  "supplier_keys": 3912,
+  "item_keys": 12803,
+  "classified_lines": 37933,
+  "mean_confidence_included": 0.555,
+  "low_confidence_included_lt_0.3": 17520,
+  "category_paths_not_in_tree": 0,
+  "clean": {
+    "rows": 41028,
+    "INV": {
+      "rows": 41028,
+      "amount_unparsable": 3,
+      "negative_amounts": 833,
+      "date_flags": {
+        "ok": 40986,
+        "implausible": 42
+      },
+      "fx_source": {
+        "given": 19667,
+        "same_ccy": 17959,
+        "table": 3338,
+        "given_rejected>table": 59,
+        "table_nearest": 5
+      },
+      "blank_description": 16695,
+      "spend_raw_total_USD": 349117757.07
+    }
+  },
+  "status": {
+    "INV:counts": 41028
+  },
+  "matching": {
+    "exact_duplicate_rows": 613
+  },
+  "exclusions": {
+    "by_reason": {
+      "included": 37933,
+      "NON_PROCUREMENT": 2491,
+      "DUPLICATE": 604
+    },
+    "non_procurement_rules": {
+      "account_desc": 2041,
+      "text:tax": 450
+    }
+  },
+  "dedup": {
+    "supplier_keys": 3995,
+    "item_keys": 13148,
+    "lines_without_item_key": 0
+  },
+  "classify": {
+    "backend": "sentence-transformers",
+    "leaves": 40,
+    "unique_texts": 7477,
+    "vague_lines": 20226,
+    "levels": 4
+  },
+  "timings_s": {
+    "ingest": 0.31,
+    "clean": 0.61,
+    "status": 0.03,
+    "match": 0.08,
+    "non_procurement": 0.41,
+    "dedup": 4.16,
+    "classify": 215.2,
+    "total": 220.92
+  }
+}

@@ -483,3 +483,51 @@ Tests: `tests/test_classify.py` (offline, TF-IDF backend).
 - Runtime with a warm cache: classification takes ~10 s for A (43k included lines) and B.
   Cold, bge-m3 embeds about 100 texts/s on CPU, so a 25k-line file with ~10k unique texts
   takes about 2 minutes.
+
+## 7. Output, data-quality report and runtime (stage 7)
+
+Code: `spendpipe/output.py`, `spendpipe/pipeline.py`. Tests: `tests/test_output.py`.
+
+**Output contract**, checked on every run (the run fails loudly if any check breaks):
+- Exactly the columns `record_id, include, exclusion_reason, supplier_key, item_key, spend,
+  l1, l2, l3, l4, confidence`.
+- One row per input record, including excluded ones (A 65,549 = 37,029 ERP + 28,520 tool;
+  B 41,028).
+- `record_id` is unique and non-blank (`ERP:<line_id>`, `TOOL:<tool_record_id>`, B/C
+  `line_id`).
+- Excluded rows have spend 0 and an exclusion reason; included rows have none.
+- Every category path is a leaf of the tree file, written exactly as in the file (checked:
+  0 violations for A and B).
+
+**Assumptions about the output**
+- `spend` is net, in the reporting currency, with 2 decimals. Negative lines (returns, credit
+  notes) keep their sign. An unparsable amount gives spend 0 and the flag
+  `AMOUNT_UNPARSABLE`.
+- Excluded rows have blank l1-l4. Their `confidence` says how sure the *exclusion* is,
+  depending on the rule that fired: status 1.0, exact duplicate row or PO + line + amount
+  0.99, PO + amount 0.97, re-export 0.9, supplier + amount or PO + text 0.85, many-to-one PO
+  + text 0.75, GL account 0.99, GL description 0.97, lexicon text 0.9.
+- Included rows: calibrated classification confidence (stage 6).
+
+**Data-quality report.** `<output>_report.json`, aggregates only, committed next to each
+output. It contains:
+- rows excluded by reason, and included spend total and by L1
+- every data-quality flag count (blank / unparsable / implausible dates, FX missing /
+  rejected / nearest month, blank descriptions, unparsable amounts)
+- the per-pass match rates, the NON_PROCUREMENT rule counts
+- key counts, mean and low confidence
+- stage timings
+
+**Never crash.** If classification raises, it is retried with the offline TF-IDF backend; if
+that also fails, categories are left blank and the error is logged. If de-dup raises,
+normalised supplier names and item codes are used as keys.
+
+**Runtime.**
+- Cold cache (every text embedded from scratch, as at the blind test): A 65,549 rows in
+  1 m 50 s, B 41,028 rows in 3 m 44 s.
+- Warm cache: about 18 s each.
+- The 60-minute budget for 25,000 lines leaves a wide margin, even on a slower machine.
+
+**Results**
+- A: 43,359 included, ZAR 2,995.8 m; DUPLICATE 21,687, NOT_APPROVED 315, CANCELLED 188.
+- B: 37,933 included, USD 328.6 m; NON_PROCUREMENT 2,491, DUPLICATE 604.

@@ -23,11 +23,10 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    from spendpipe.pipeline import run   # heavy imports only when needed
+    from spendpipe.pipeline import run_to_file   # heavy imports only when needed
     cfg = load_config(args.config, data_dir=args.data_dir)
     log.info("Loaded config for company %s (%d source files)", cfg.company, len(cfg.sources))
-    run(cfg)
-    # The output writer is added in a later stage.
+    run_to_file(cfg, args.out)
     return 0
 
 
