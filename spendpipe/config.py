@@ -93,6 +93,7 @@ class Config:
     path: Path
     data_dir: Path
     raw: dict[str, Any] = field(repr=False)
+    home_dir: Path | None = None   # data_dir written in the YAML (before --data-dir)
 
     # Convenience accessors -------------------------------------------------
     @property
@@ -106,12 +107,25 @@ class Config:
     def section(self, name: str) -> dict[str, Any]:
         return self.raw.get(name) or {}
 
-    def file(self, rel: str | None) -> Path | None:
-        """Resolve a data file name against data_dir."""
+    def file(self, rel: str | None, fallback: bool = False) -> Path | None:
+        """Resolve a data file name against data_dir.
+
+        fallback=True is for REFERENCE files (tree, FX table): if --data-dir
+        points at a folder without them (e.g. blind-test A2 holding only the
+        invoice files), the config's own data folder is used instead. Source
+        data files never fall back: silently reading old data would be wrong."""
         if not rel:
             return None
         p = Path(rel)
-        return p if p.is_absolute() else (self.data_dir / p)
+        if p.is_absolute():
+            return p
+        here = self.data_dir / p
+        if fallback and not here.exists() and self.home_dir is not None:
+            home = self.home_dir / p
+            if home.exists():
+                log.warning("%s not in %s; using %s", p.name, self.data_dir, home)
+                return home
+        return here
 
 
 class ConfigError(ValueError):
@@ -138,12 +152,11 @@ def load_config(path: str | Path, data_dir: str | Path | None = None) -> Config:
     raw = _deep_merge(DEFAULTS, user)
     raw["sources"] = [_deep_merge(SOURCE_DEFAULTS, s) for s in user.get("sources", [])]
 
-    if data_dir is not None:
-        ddir = Path(data_dir).resolve()
-    else:
-        ddir = (path.parent / raw["data_dir"]).resolve()
+    home = (path.parent / raw["data_dir"]).resolve()
+    ddir = Path(data_dir).resolve() if data_dir is not None else home
 
-    cfg = Config(company=str(raw.get("company", path.stem)), path=path, data_dir=ddir, raw=raw)
+    cfg = Config(company=str(raw.get("company", path.stem)), path=path, data_dir=ddir, raw=raw,
+                 home_dir=home)
     _validate(cfg)
     return cfg
 
@@ -180,11 +193,11 @@ def _validate(cfg: Config) -> None:
     tax_file = cfg.section("taxonomy").get("file")
     if not tax_file:
         problems.append("`taxonomy.file` is required")
-    elif not cfg.file(tax_file).exists():
+    elif not cfg.file(tax_file, fallback=True).exists():
         problems.append(f"taxonomy file not found: {cfg.file(tax_file)}")
 
     fx_file = cfg.section("fx").get("table_file")
-    if fx_file and not cfg.file(fx_file).exists():
+    if fx_file and not cfg.file(fx_file, fallback=True).exists():
         log.warning("FX table %s not found; lines without a rate will be flagged", cfg.file(fx_file))
 
     if problems:

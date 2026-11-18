@@ -186,7 +186,7 @@ class FxTable:
     @classmethod
     def from_config(cls, cfg: Config) -> "FxTable":
         fx = cfg.section("fx")
-        path = cfg.file(fx.get("table_file"))
+        path = cfg.file(fx.get("table_file"), fallback=True)
         if not path or not path.exists():
             return cls(None)
         from spendpipe.ingest import read_table

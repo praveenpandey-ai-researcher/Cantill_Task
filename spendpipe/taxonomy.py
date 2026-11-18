@@ -62,7 +62,7 @@ def path_text(path: tuple[str, ...], description: str = "") -> str:
 
 def load_tree(cfg: Config) -> Tree:
     tc = cfg.section("taxonomy")
-    df = read_table(cfg.file(tc["file"]))
+    df = read_table(cfg.file(tc["file"], fallback=True))
     cols = _level_columns(df, tc.get("level_columns"))
     desc_col = tc.get("description_column")
     if desc_col is None:

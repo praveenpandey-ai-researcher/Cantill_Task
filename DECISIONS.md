@@ -1,6 +1,38 @@
 # DECISIONS
 
-Data forensics and every assumption made. Written as the work happens.
+Data forensics and every assumption made, written while the work happened (stages 0-8 below).
+Every number can be reproduced with the scripts in `analysis/`.
+
+## Summary of assumptions (we could not ask questions)
+
+| # | Ambiguity | Assumption | Evidence / section |
+|---|---|---|---|
+| 1 | Tool VAT rate `0` | Real zero rate, net = gross | 94.6% match ERP as-is (1) |
+| 2 | Tool VAT rate formats | `15`, `15%`, `0.15` all mean 15%; blank means 15% (brief) | 96.4% match ERP after /1.15 (1) |
+| 3 | Tool slash dates | Day first | part 1 > 12 in 2,050 rows, part 2 never (1) |
+| 4 | Tool PO not in ERP | Tool-only spend, never fuzzy-matched | PO edit distance = random (3) |
+| 5 | Extra invoices on a fully invoiced PO with the same item | DUPLICATE (the ERP receipt is the purchase) | 379 lines, text similarity 97 (3) |
+| 6 | Identical tool lines | Matched to ERP first; only leftovers count as re-exports | 441 had their own ERP receipt (3) |
+| 7 | A's golden supplier keys | No vendor-master record -> one shared `UNMANAGED` key | 99.2% blank vendor_id in that key (5) |
+| 8 | A's golden item keys | No material number -> blank key; catalogue/free-text without material type -> one key | labels_A structure (5) |
+| 9 | B has no status column | Every line is a posted invoice: no CANCELLED / NOT_APPROVED | seed has none either (1) |
+| 10 | Blank `paid_date` in B | Posted, not yet paid, still counts | (1) |
+| 11 | USD lines carrying a rate | Rate ignored, USD is USD (brief) | 1,279 lines with an MXN rate (1) |
+| 12 | Given rate far from the table | More than 5x off -> table rate | 59 EUR/CHF lines at ~19x (2) |
+| 13 | Tiny PYG/CLP/MMK amounts | Brief's rule applied literally, no re-scaling | < 1,000 USD in total (2) |
+| 14 | Implausible invoice dates | Flagged; FX uses the posting month | 42 lines (2) |
+| 15 | Negative amounts | Credit notes / returns, kept as negative spend | (1) |
+| 16 | Exact duplicate rows in B | Later copy DUPLICATE | seed avoids them: 2 vs ~90 expected (1) |
+| 17 | Intercompany in B | GL description `IC..` / `I/C` / `Intercompany` | 364/364 seed lines (4) |
+| 18 | Taxes | Excluded by text phrases; bought tax/payroll *services* kept | seed P/R 1.000 (4) |
+| 19 | Customs duty | Kept as spend (B's tree has `Customs Clearance & Duties`) | (1, 4) |
+| 20 | Partnership/membership fees | Kept as spend (not "partner billings") | (4) |
+| 21 | Duplicate of a tax/IC line | NON_PROCUREMENT wins over DUPLICATE (the original isn't counted either) | 9 lines (4) |
+| 22 | Excluded rows | Blank l1-l4; confidence = certainty of the exclusion rule | (7) |
+| 23 | B lines without code or text | Item key = vendor + GL account | 4,195 lines (5) |
+| 24 | Seed labels "not perfect" | Used as given, for evaluation and as kNN memory for B/B2 | (6) |
+| 25 | A2/B2 classification | Uses the same company's labels as a kNN memory; C has none | brief: supervised layer "only when labels exist" (6, 8) |
+| 26 | No LLM API key at the blind test | Fully local pipeline, LLM cost 0 | (6) |
 
 ## 0. Setup
 - Repo root is `Cantill_Task/`. Task data stays outside the repo (`../company_A`, `../company_B`)

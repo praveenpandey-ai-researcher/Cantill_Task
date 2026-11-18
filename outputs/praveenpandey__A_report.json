@@ -95,13 +95,13 @@
     "levels": 4
   },
   "timings_s": {
-    "ingest": 0.32,
-    "clean": 0.64,
-    "status": 0.05,
-    "match": 2.04,
-    "non_procurement": 0.42,
-    "dedup": 1.68,
-    "classify": 8.84,
-    "total": 14.15
+    "ingest": 0.3,
+    "clean": 0.65,
+    "status": 0.04,
+    "match": 2.07,
+    "non_procurement": 0.41,
+    "dedup": 1.67,
+    "classify": 9.05,
+    "total": 14.36
   }
 }
