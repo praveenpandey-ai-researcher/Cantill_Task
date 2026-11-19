@@ -1,0 +1,86 @@
+{
+  "company": "C",
+  "rows": 25001,
+  "included": 24722,
+  "excluded_by_reason": {
+    "NON_PROCUREMENT": 173,
+    "CANCELLED": 106
+  },
+  "spend_total_included": 14823774.87,
+  "spend_by_l1": {
+    "Production Equipment & Facilities": 7046134.29,
+    "Capital Projects & Construction": 2850274.99,
+    "Well Services & Workover": 1294283.93,
+    "Drilling & Completions": 1006048.22,
+    "MRO & Industrial Supplies": 827179.76,
+    "Professional & Technical Services": 780162.46,
+    "Information Technology": 551871.18,
+    "Facilities & Corporate Services": 255300.32,
+    "Utilities": 117651.63,
+    "Fleet & Equipment": 91547.29,
+    "Marketing & Logistics": 3320.8
+  },
+  "data_quality_flags": {},
+  "supplier_keys": 1338,
+  "item_keys": 7734,
+  "classified_lines": 24722,
+  "mean_confidence_included": 0.181,
+  "low_confidence_included_lt_0.3": 21564,
+  "category_paths_not_in_tree": 0,
+  "clean": {
+    "rows": 25001,
+    "INV": {
+      "rows": 25001,
+      "amount_unparsable": 0,
+      "negative_amounts": 187,
+      "date_flags": {
+        "ok": 25001
+      },
+      "fx_source": {
+        "same_ccy": 25001
+      },
+      "blank_description": 0,
+      "spend_raw_total_USD": 20850981.06
+    }
+  },
+  "status": {
+    "INV:counts": 24895,
+    "INV:CANCELLED": 106
+  },
+  "matching": {
+    "exact_duplicate_rows": 0
+  },
+  "exclusions": {
+    "by_reason": {
+      "included": 24722,
+      "NON_PROCUREMENT": 173,
+      "CANCELLED": 106
+    },
+    "non_procurement_rules": {
+      "account_desc": 167,
+      "text:tax": 7
+    }
+  },
+  "dedup": {
+    "supplier_keys": 1417,
+    "item_keys": 7762,
+    "lines_without_item_key": 0
+  },
+  "classify": {
+    "backend": "sentence-transformers",
+    "leaves": 148,
+    "unique_texts": 10063,
+    "vague_lines": 27,
+    "levels": 4
+  },
+  "timings_s": {
+    "ingest": 0.18,
+    "clean": 0.48,
+    "status": 0.03,
+    "match": 0.07,
+    "non_procurement": 0.6,
+    "dedup": 5.3,
+    "classify": 1018.67,
+    "total": 1025.43
+  }
+}
