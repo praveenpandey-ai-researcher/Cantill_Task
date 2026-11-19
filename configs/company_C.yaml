@@ -1,0 +1,91 @@
+# Company C: US oil & gas producer (Bluestem Production / Midstream / Gas & Oil).
+# One AP invoice-line file, 25,001 lines, Jul-Dec 2024, amounts already in USD.
+# Drafted with `python -m spendpipe profile`, then reviewed by hand. No labels.
+company: C
+reporting_currency: USD
+data_dir: ../../C        # relative to this config; or pass --data-dir
+
+taxonomy:
+  file: category_tree_C.csv
+
+# Data covers 07/2024-12/2024; anything far outside is flagged DATE_IMPLAUSIBLE.
+dates:
+  min: "2023-01-01"
+  max: "2025-12-31"
+
+sources:
+  - name: INV
+    file: invoice_lines.csv
+    role: primary
+    id_prefix: ""
+    columns:
+      record_id: line_id
+      amount: line_amount_usd          # net line amount, USD (0.7% negative = credits)
+      date: invoice_date
+      supplier: supplier_name          # no vendor id in C
+      # Line text + product/service text. ~1/3 of lines only say "Total invoice
+      # amount representing unitemized charges", so the GL description is added
+      # as classification context below.
+      description: [line_description, product_service_description]
+      quantity: quantity
+      status: status
+      account_desc: gl_account_description
+      invoice_number: invoice_number
+      site: buyer_entity
+    date_formats: ['%m/%d/%Y']         # e.g. 12/31/2024 (month first)
+    dayfirst: false
+    amount:
+      gross: false                     # no VAT in US invoice lines
+    currency:
+      fixed: USD
+    # Seen: Approved 24,895, Cancelled 106.
+    status:
+      include: [Approved]
+      CANCELLED: [Cancelled]
+      unknown_means: NOT_APPROVED
+
+matching:
+  enabled: false                       # single system
+  exact_duplicates: true               # rows identical in every field but the id -> DUPLICATE
+
+exclusions:
+  non_procurement:
+    lexicon: lexicons/non_procurement.yaml
+    text_fields: [description]
+    # GL descriptions that are not spend with a third-party supplier
+    # (same groups as the shared lexicon: tax, royalty, revenue, finance,
+    # payroll/people, government fines, donations).
+    account_desc_patterns:
+      - '^IC\d'
+      - '^IC\s'
+      - '^I/C\b'
+      - '^Intercompany\b'
+      - '\btax(es)?\b'                       # Accrued Severance / Ad Valorem Taxes, Impact Fee & Other Tax
+      - '\broyalt'                           # MMS / State Royalty Payable
+      - '\brevenue\b'                        # Gas Revenue - Marketing, Other O&G Revenue, SWD Revenue
+      - '^Gas Rev\b'
+      - '^AR\b.*\bClearing\b'                # AR Revenue / JIB Deposits Clearing
+      - '^Miscellaneous Receivable\b'
+      - '^Debt Issuance Cost\b'
+      - '^Employee Deductions Payable\b'
+      - '^Other Benefits\b'
+      - '^Director Fees\b'
+      - '^Donations\b'
+      - '^Community Giving\b'
+      - '^Penalty and Fees\b'
+      - '^Public Filing Fees\b'
+      - '^O&G App Properties\b'              # purchase of producing properties
+    accounts: []
+    supplier_patterns: ['\bbluestem\b']      # own group name -> intercompany
+
+dedup:
+  supplier:
+    threshold: 92
+  item:
+    no_code: text                      # product_service_code is mostly "PRODUCT"/blank
+
+classify:
+  model: BAAI/bge-m3
+  text_fields: [description]
+  context_fields: [account_desc]       # GL account text: strong signal in C
+  # no labels for a new company: zero-shot + supplier/item priors
