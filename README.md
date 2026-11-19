@@ -101,8 +101,4 @@ python analysis/eval_classify.py --company A B --reference-split 0.5   # with ha
 python analysis/eval_classify.py --fit-calibration               # refit confidence curves
 ```
 
-## AI tools used
-
-Built with **Claude Code** (Anthropic) as a pair-programmer: it helped with code, data
-exploration queries and documentation. Every design choice was checked against measurements
-on the data, which are recorded in DECISIONS.md. The tool itself uses no LLM at run time.
+.
